@@ -108,7 +108,8 @@ const getUser = async (req, res, next) => {
 // PROTECTED
 const changeAvatar = async (req, res, next) => {
   try {
-    res.send("Change User Avatar");
+    return res.json(req.files);
+    console.log(req.files);
   } catch (error) {
     return next(new HttpError(error));
   }
