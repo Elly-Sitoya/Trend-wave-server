@@ -5,11 +5,14 @@ const { connect } = require("mongoose");
 const usersRoutes = require("./routes/usersRoutes");
 const postsRoute = require("./routes/postsRoutes");
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
+const upload = require("express-fileupload");
 
 const app = express();
 app.use(express.json({ extended: true }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cors({ credentials: true, origin: "http://localhost:3000" }));
+app.use(upload());
+app.use("/uploads", express.static(__dirname + "/uploads"));
 
 // Routes
 app.use("/api/users", usersRoutes);
