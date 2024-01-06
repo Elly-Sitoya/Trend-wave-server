@@ -5,7 +5,7 @@ const jwt = require("jsonwebtoken");
 const fs = require("fs");
 const path = require("path");
 const { v4: uuid } = require("uuid");
-const { use } = require("../routes/usersRoutes");
+const { log } = require("console");
 
 // ============================REGISTER NEW USER===============================
 // POST: api/users/register
@@ -121,8 +121,10 @@ const changeAvatar = async (req, res, next) => {
 
     // delete old avatar if it exists
     if (user.avatar) {
-      fs.unlink(path.join(__dirname, "..", `uploads`, user.avatar), (error) => {
-        return next(new HttpError(error));
+      fs.unlink(path.join(__dirname, "..", "uploads", user.avatar), (err) => {
+        if (err) {
+          return next(new HttpError(err));
+        }
       });
     }
 
