@@ -75,7 +75,7 @@ const getPosts = async (req, res, next) => {
     if (!posts) {
       return next(new HttpError("No posts found", 404));
     }
-    res.status(200).json({ posts });
+    res.status(200).json({ posts, nbHits: posts.length });
   } catch (error) {
     return next(new HttpError(error));
   }
@@ -159,70 +159,74 @@ const editPost = async (req, res, next) => {
       return next(new HttpError("Fill in all fields", 422));
     }
 
-    if (!req.files) {
-      updatedPost = await Post.findByIdAndUpdate(
-        req.params.id,
-        { title, category, description },
-        { new: true }
-      );
-    } else {
-      // get old post from the database
-      const oldPost = await Post.findById(req.params.id);
+    // get old post from the database
+    const oldPost = await Post.findById(req.params.id);
 
-      // delete old thumbnail from upload
-      fs.unlink(
-        path.join(__dirname, "..", "/uploads", oldPost.thumbnail),
-        async (err) => {
-          if (err) {
-            return next(new HttpError(err));
+    if (req.user.id == oldPost.creator) {
+      if (!req.files) {
+        updatedPost = await Post.findByIdAndUpdate(
+          req.params.id,
+          { title, category, description },
+          { new: true }
+        );
+      } else {
+        // delete old thumbnail from upload
+        fs.unlink(
+          path.join(__dirname, "..", "/uploads", oldPost.thumbnail),
+          async (err) => {
+            if (err) {
+              return next(new HttpError(err));
+            }
           }
-        }
-      );
+        );
 
-      // Checking the thumbnail size
-      const { thumbnail } = req.files;
-      if (thumbnail.size > 2000000) {
-        return next(
-          new HttpError(
-            "Thumbnail is too large. It should be less than 2mb",
-            422
-          )
+        // Checking the thumbnail size
+        const { thumbnail } = req.files;
+        if (thumbnail.size > 2000000) {
+          return next(
+            new HttpError(
+              "Thumbnail is too large. It should be less than 2mb",
+              422
+            )
+          );
+        }
+
+        // Renaming the thumbnail
+        let fileName = thumbnail.name;
+        fileName = fileName.split(".");
+        const newFileName =
+          fileName[0] + uuid() + "." + fileName[fileName.length - 1];
+
+        // Uploading the thumbnail to the server
+        thumbnail.mv(
+          path.join(__dirname, "..", "/uploads", newFileName),
+          async (err) => {
+            if (err) {
+              return next(new HttpError(err));
+            }
+          }
+        );
+
+        updatedPost = await Post.findByIdAndUpdate(
+          req.params.id,
+          {
+            title,
+            category,
+            description,
+            thumbnail: newFileName,
+          },
+          { new: true, runValidators: true }
         );
       }
 
-      // Renaming the thumbnail
-      let fileName = thumbnail.name;
-      fileName = fileName.split(".");
-      const newFileName =
-        fileName[0] + uuid() + "." + fileName[fileName.length - 1];
+      if (!updatedPost) {
+        return next(new HttpError("Couldn't update the post", 400));
+      }
 
-      // Uploading the thumbnail to the server
-      thumbnail.mv(
-        path.join(__dirname, "..", "/uploads", newFileName),
-        async (err) => {
-          if (err) {
-            return next(new HttpError(err));
-          }
-        }
-      );
-
-      updatedPost = await Post.findByIdAndUpdate(
-        req.params.id,
-        {
-          title,
-          category,
-          description,
-          thumbnail: newFileName,
-        },
-        { new: true, runValidators: true }
-      );
+      return res.status(200).json(updatedPost);
+    } else {
+      return next(new HttpError(`Could not edit the post`));
     }
-
-    if (!updatedPost) {
-      return next(new HttpError("Couldn't update the post", 400));
-    }
-
-    return res.status(200).json(updatedPost);
   } catch (error) {
     return next(new HttpError(error));
   }
@@ -232,9 +236,43 @@ const editPost = async (req, res, next) => {
 // DELETE : api/posts/:id
 // PROTECTED
 
-const deletePost = (req, res, next) => {
+const deletePost = async (req, res, next) => {
   try {
-    res.json("Delete post");
+    const postId = req.params.id;
+
+    if (!postId) {
+      return next(new HttpError("Post unavailable", 400));
+    }
+
+    const post = await Post.findById(postId);
+    const fileName = post?.thumbnail;
+
+    if (!post) {
+      return next(new HttpError("No post found/ Already deleted", 404));
+    }
+
+    if (req.user.id == post.creator) {
+      // delete thumbnail from uploads folder
+      fs.unlink(
+        path.join(__dirname, "..", "uploads", fileName),
+        async (err) => {
+          if (err) {
+            return next(new HttpError(err));
+          } else {
+            await Post.findByIdAndDelete(postId);
+
+            // Decrease the posts count in the db
+            const currentUser = await User.findById(req.user.id);
+            let postCounts = currentUser.posts - 1;
+
+            await User.findByIdAndUpdate(req.user.id, { posts: postCounts });
+          }
+        }
+      );
+      return res.json(`Post ${postId} deleted successfully`);
+    } else {
+      return next(new HttpError("Post couldn't be deleted", 403));
+    }
   } catch (error) {
     return next(new HttpError(error));
   }
