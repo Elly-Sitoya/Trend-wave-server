@@ -80,7 +80,7 @@ const loginUser = async (req, res, next) => {
       expiresIn: "30d",
     });
 
-    return res.status(200).json({ token });
+    return res.status(200).json({ token, id, name });
   } catch (error) {
     return next(
       new HttpError(`Login failed please check your credentials`, 422)

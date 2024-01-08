@@ -13,10 +13,17 @@ const createPost = (req, res, next) => {
   try {
     let { title, category, description } = req.body;
 
-    if (!title || !category || !description || !req.files) {
-      return next(
-        new HttpError("Fill in all fields and choose thumbnail", 422)
-      );
+    if (!title) {
+      return next(new HttpError("Fill in title field ", 422));
+    }
+    if (!category) {
+      return next(new HttpError("Fill in category field", 422));
+    }
+    if (!description) {
+      return next(new HttpError("Fill in description field", 422));
+    }
+    if (!req.files) {
+      return next(new HttpError("Choose thumbnail", 422));
     }
 
     const { thumbnail } = req.files;
