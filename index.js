@@ -10,9 +10,7 @@ const upload = require("express-fileupload");
 const app = express();
 app.use(express.json({ extended: true }));
 app.use(express.urlencoded({ extended: true }));
-app.use(
-  cors({ credentials: true, origin: "https://trend-wave-blog.onrender.com" })
-);
+
 app.use(cors({ credentials: true, origin: "https://trend-wave.netlify.app" }));
 app.use("/uploads", express.static(__dirname + "/uploads"));
 
