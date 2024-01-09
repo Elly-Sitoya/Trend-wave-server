@@ -12,8 +12,7 @@ app.use(express.json({ extended: true }));
 app.use(express.urlencoded({ extended: true }));
 app.use(upload());
 
-// app.use(cors({ credentials: true, origin: "https://trend-wave.netlify.app" }));
-app.use(cors({ credentials: true, origin: "http://localhost:3000" }));
+app.use(cors({ credentials: true, origin: "https://trend-wave.netlify.app" }));
 app.use("/uploads", express.static(__dirname + "/uploads"));
 
 // Routes
