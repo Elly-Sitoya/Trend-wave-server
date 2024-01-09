@@ -22,7 +22,7 @@ const createPost = (req, res, next) => {
     if (!description) {
       return next(new HttpError("Fill in description field", 422));
     }
-    if (!req.files) {
+    if (!req.files || !req.files.thumbnail) {
       return next(new HttpError("Choose thumbnail", 422));
     }
 
